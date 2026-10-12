@@ -1,0 +1,79 @@
+const $=s=>document.querySelector(s),app=$('#app');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=d=>new Date(d.replace(' ','T')+'Z').toLocaleDateString(undefined,{dateStyle:'medium'});
+let me=null,csrf='',cats=[],isAdmin=false;
+async function api(p,m='GET',b){const r=await fetch('/api'+p,{method:m,headers:{'Content-Type':'application/json','x-csrf-token':csrf},body:b?JSON.stringify(b):undefined});
+ const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Something went wrong.');return d}
+function toast(t,bad){const e=$('#toast');e.textContent=t;e.className='show'+(bad?' bad':'');clearTimeout(toast.t);toast.t=setTimeout(()=>e.className='',3500)}
+const sk='<div class="wrap"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>';
+const wrap=h=>`<section class="wrap rv">${h}</section>`;
+const empty=(t,a='')=>`<div class="empty"><p style="margin:0 auto 10px">${t}</p>${a}</div>`;
+const signin='<a class="btn" href="/auth/google">Sign in with Google</a>';
+function form(id,fn,ok){const f=$(id);if(!f)return;f.onsubmit=async e=>{e.preventDefault();const b=f.querySelector('button');b.disabled=true;
+ try{const r=await fn(Object.fromEntries(new FormData(f)));toast(ok||'Saved');f.reset?.();if(r!==false)route(location.pathname,false)}catch(x){toast(x.message,true)}b.disabled=false}}
+function authUI(){$('#auth').innerHTML=(me?`<a href="/dashboard" data-l>${esc(me.name||'Dashboard')}</a><a href="#" id="lo">Sign out</a>`:'<a class="btn sm" href="/auth/google">Sign in</a>')+(isAdmin?'<a href="/admin" data-l>Admin</a>':'');
+ const l=$('#lo');if(l)l.onclick=async e=>{e.preventDefault();await fetch('/auth/logout',{method:'POST',headers:{'x-csrf-token':csrf}});location.href='/'}}
+const hero=`<section class="hero"><i class="fl"></i><i class="fl"></i><i class="fl"></i><i class="fl"></i><div class="wrap"><div>
+<h1>Modern Farming, Smarter Technology, Better Future.</h1><p>Practical knowledge, a helpful farmer community and online classes — made simple for every farmer, from first season to fiftieth.</p>
+<div class="row"><a class="btn" href="/classes" data-l>Explore classes</a><a class="btn alt" href="/discussions" data-l>Join the discussion</a></div></div>
+<svg class="scene" viewBox="0 0 400 300" role="img" aria-label="A sprout growing under the sun"><circle class="sun" cx="310" cy="70" r="40" fill="#f3d36b"/>
+<path d="M0 260Q100 210 200 240T400 225V300H0Z" fill="#cfe6c4"/><path d="M0 280Q120 245 220 265T400 255V300H0Z" fill="#0b3d1e"/>
+<g class="sway"><path class="stem" d="M200 262V150" stroke="#0b3d1e" stroke-width="6" fill="none" stroke-linecap="round"/>
+<path class="leaf" d="M200 190C150 190 130 150 135 120C180 125 205 150 200 190Z" fill="#1f7a3a"/><path class="leaf b" d="M200 170C250 170 275 130 268 100C225 105 198 135 200 170Z" fill="#2f9a50"/></g></svg></div></section>`;
+async function home(){app.innerHTML=hero+wrap('<h2>Start here</h2><div class="grid">'+[['/learn','Farming knowledge','Techniques, crop management and new technology.'],['/discussions','Discussion room','Ask questions and share experience with farmers.'],['/classes','Online classes','Lessons, videos and materials you can follow at your own pace.']].map(c=>`<a class="card" href="${c[0]}" data-l><h3>${c[1]}</h3><p>${c[2]}</p></a>`).join('')+'</div><h2>Latest articles</h2><div id="la" class="grid"></div>');
+ const a=await api('/articles');$('#la').innerHTML=a.slice(0,3).map(artCard).join('')||'<div class="empty">No articles yet.</div>'}
+const artCard=a=>`<a class="card" href="/learn/${esc(a.slug)}" data-l><span class="tag">${esc(a.category)}</span><h3>${esc(a.title)}</h3><p>${esc(a.summary)}</p></a>`;
+async function learn(){const a=await api('/articles');app.innerHTML=wrap('<h1>Modern farming knowledge</h1>'+(a.length?'<div class="grid">'+a.map(artCard).join('')+'</div>':empty('No articles yet. Check back soon.')))}
+async function article(s){const a=await api('/articles/'+s);document.title=a.title+' — DINESH RAJBANSHI';app.innerHTML=wrap(`<span class="tag">${esc(a.category)}</span><h1>${esc(a.title)}</h1><p>${esc(fmt(a.created))}</p><div class="pre">${esc(a.body)}</div><p><a href="/learn" data-l>← All articles</a></p>`)}
+async function discuss(){const c=new URLSearchParams(location.search).get('category')||'';const t=await api('/topics'+(c?'?category='+c:''));
+ app.innerHTML=wrap(`<h1>Discussion room</h1><p>Anyone can read. Sign in with Google to ask or reply — your contact details stay private.</p><div class="row">${['',...cats].map(x=>`<a class="btn sm ${x===c?'':'alt'}" href="/discussions${x?'?category='+x:''}" data-l>${x||'All'}</a>`).join('')}</div>
+ <h2>Ask a question</h2>${me?`<form class="f" id="nt"><label>Category<select name="category">${cats.map(x=>`<option>${x}</option>`).join('')}</select></label><label>Title<input name="title" required minlength="5" maxlength="150"></label><label>Your question<textarea name="body" required minlength="10"></textarea></label><button class="btn">Post question</button></form>`:signin}
+ <h2>Recent discussions</h2>${t.length?'<div class="grid">'+t.map(x=>`<a class="card" href="/discussions/${x.id}" data-l><span class="tag">${esc(x.category)}</span><h3>${esc(x.title)}</h3><p>${esc(x.author)} · ${x.replies} replies</p></a>`).join('')+'</div>':empty('No discussions here yet. Be the first to ask.')}`);
+ form('#nt',async d=>{const r=await api('/topics','POST',d);if(r.pending){toast('Submitted — waiting for approval');return}},'Question posted')}
+async function topic(id){const t=await api('/topics/'+id);document.title=t.title;app.innerHTML=wrap(`<span class="tag">${esc(t.category)}</span><h1>${esc(t.title)}</h1><p>${esc(t.author)} · ${esc(fmt(t.created))}</p><div class="pre">${esc(t.body)}</div><h2>Replies</h2>
+ ${t.replies.map(r=>`<div class="card" style="margin:10px 0"><b>${esc(r.author)}</b> <small>${esc(fmt(r.created))}</small><div class="pre">${esc(r.body)}</div></div>`).join('')||empty('No replies yet.')}
+ <h2>Your reply</h2>${me?'<form class="f" id="rp"><textarea name="body" required minlength="2" aria-label="Reply"></textarea><button class="btn">Post reply</button></form>':signin}`);
+ form('#rp',d=>api(`/topics/${id}/replies`,'POST',d),'Reply posted')}
+async function classes(){const c=await api('/courses');app.innerHTML=wrap('<h1>Modern farming classes</h1>'+(c.length?'<div class="grid">'+c.map(x=>`<a class="card" href="/classes/${x.id}" data-l><span class="tag">${esc(x.level)}</span><h3>${esc(x.title)}</h3><p>${esc(x.description)}</p><small>${x.lessons} lessons</small></a>`).join('')+'</div>':empty('No classes yet.')))}
+const yt=u=>{try{const x=new URL(u);const v=x.hostname.includes('youtu.be')?x.pathname.slice(1):x.searchParams.get('v');return v?`<iframe width="100%" height="315" src="https://www.youtube.com/embed/${encodeURIComponent(v)}" title="Lesson video" allowfullscreen loading="lazy"></iframe>`:`<a href="${esc(u)}" rel="noopener" target="_blank">Watch video</a>`}catch{return''}};
+async function course(id){const c=await api('/courses/'+id);document.title=c.title;app.innerHTML=wrap(`<span class="tag">${esc(c.level)}</span><h1>${esc(c.title)}</h1><p>${esc(c.description)}</p>
+ ${c.enrolled?'':(me?'<button class="btn" id="en">Enroll for free</button>':signin)}<h2>Lessons</h2>${c.lessons.map((l,i)=>`<div class="card" style="margin:10px 0"><h3>${i+1}. ${esc(l.title)}</h3>${l.content!==undefined?`${l.video_url?yt(l.video_url):''}<div class="pre">${esc(l.content)}</div>`:'<small>Enroll to unlock</small>'}</div>`).join('')||empty('Lessons are coming soon.')}`);
+ const e=$('#en');if(e)e.onclick=async()=>{try{await api(`/courses/${id}/enroll`,'POST');toast('You are enrolled');course(id)}catch(x){toast(x.message,true)}}}
+async function dash(){if(!me){app.innerHTML=wrap('<h1>Your dashboard</h1>'+empty('Sign in to manage your profile, discussions and classes.',signin));return}
+ const d=await api('/me/dashboard');app.innerHTML=wrap(`<h1>Your dashboard</h1><h2>Profile</h2><p>Your phone number is private and only visible to site admins.</p><form class="f" id="pf"><label>Full name<input name="name" required value="${esc(me.name)}"></label><label>Contact number<input name="phone" required inputmode="tel" value="${esc(me.phone||'')}" placeholder="+977 98XXXXXXXX"></label><button class="btn">Save profile</button></form>
+ <h2>My classes</h2>${d.classes.map(c=>`<a class="card" style="margin:8px 0" href="/classes/${c.id}" data-l>${esc(c.title)}</a>`).join('')||empty('You have not enrolled yet.','<a class="btn" href="/classes" data-l>Browse classes</a>')}
+ <h2>My discussions</h2>${d.topics.map(t=>`<a class="card" style="margin:8px 0" href="/discussions/${t.id}" data-l>${esc(t.title)} <span class="tag">${esc(t.status)}</span></a>`).join('')||empty('No discussions yet.')}`);
+ form('#pf',async x=>{await api('/me','PUT',x);me=(await api('/me')).user;authUI();return false},'Profile saved')}
+async function adminPage(){if(!isAdmin){app.innerHTML=wrap('<h1>Admin login</h1><form class="f" id="al"><label>Password<input name="password" type="password" required autocomplete="current-password"></label><button class="btn">Log in</button></form>');form('#al',async d=>{await api('/admin/login','POST',d);await boot();return false},'Logged in');return}
+ const o=await api('/admin/overview');const tb=h=>`<div class="tw"><table>${h}</table></div>`;
+ const btn=(a,l,x='')=>`<button class="btn sm alt" data-a="${a}" ${x}>${l}</button>`;
+ app.innerHTML=wrap(`<h1>Admin dashboard</h1>${btn('lo','Log out of admin')}<h2>Users</h2>${tb(o.users.map(u=>`<tr><td>${esc(u.name)}<br><small>${esc(u.email)}</small></td><td>${u.role}</td><td>${u.banned?'banned':''}</td><td>${btn('u',u.banned?'Unban':'Ban',`data-id="${u.id}" data-b="${!u.banned}"`)}</td></tr>`).join(''))}
+ <h2>Discussions</h2>${tb(o.topics.map(t=>`<tr><td>${esc(t.title)}<br><small>${esc(t.author)}</small></td><td>${t.status}</td><td>${btn('t','Show',`data-id="${t.id}" data-s="visible"`)} ${btn('t','Hide',`data-id="${t.id}" data-s="hidden"`)}</td></tr>`).join(''))}
+ <h2>Replies</h2>${tb(o.replies.map(t=>`<tr><td>${esc(t.body)}<br><small>${esc(t.author)}</small></td><td>${t.status}</td><td>${btn('r','Show',`data-id="${t.id}" data-s="visible"`)} ${btn('r','Hide',`data-id="${t.id}" data-s="hidden"`)}</td></tr>`).join(''))}
+ <h2>New article</h2><form class="f" id="fa"><input name="title" placeholder="Title" required><input name="category" placeholder="Category" required><input name="summary" placeholder="Short summary" required><textarea name="body" placeholder="Article text" required></textarea><button class="btn">Publish article</button></form>
+ <h2>New class</h2><form class="f" id="fc"><input name="title" placeholder="Class title" required><textarea name="description" placeholder="Description" required></textarea><select name="level"><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select><button class="btn">Create class</button></form>
+ <h2>New lesson</h2><form class="f" id="fl"><select name="course_id">${o.courses.map(c=>`<option value="${c.id}">${esc(c.title)}</option>`).join('')}</select><input name="title" placeholder="Lesson title" required><input name="video_url" placeholder="https:// video link (optional)"><textarea name="content" placeholder="Lesson notes"></textarea><input name="pos" type="number" placeholder="Order" value="0"><button class="btn">Add lesson</button></form>
+ <h2>Manage content</h2>${tb(o.articles.map(a=>`<tr><td>Article: ${esc(a.title)}</td><td>${btn('da','Delete',`data-id="${a.id}"`)}</td></tr>`).join('')+o.courses.map(a=>`<tr><td>Class: ${esc(a.title)}</td><td>${btn('dc','Delete',`data-id="${a.id}"`)}</td></tr>`).join(''))}
+ <h2>Contact messages</h2>${tb(o.messages.map(m=>`<tr><td>${esc(m.name)} &lt;${esc(m.email)}&gt;<br>${esc(m.message)}</td></tr>`).join('')||'<tr><td>No messages.</td></tr>')}`);
+ for(const[i,u]of[['#fa','/admin/articles'],['#fc','/admin/courses'],['#fl','/admin/lessons']])form(i,d=>api(u,'POST',d),'Saved');
+ app.onclick=async e=>{const b=e.target.closest('[data-a]');if(!b)return;const{a,id,s,r,b:bn}=b.dataset;
+  try{if(a==='lo'){await api('/admin/logout','POST');return boot()}if(a==='u')await api('/admin/users/'+id,'PATCH',r?{role:r}:{banned:bn==='true'});else if(a==='t'||a==='r')await api(`/admin/${a==='t'?'topics':'replies'}/${id}`,'PATCH',{status:s});
+  else{if(!confirm('Delete permanently?'))return;await api(`/admin/${a==='da'?'articles':'courses'}/${id}`,'DELETE')}toast('Done');adminPage()}catch(x){toast(x.message,true)}}}
+const page=(t,h)=>()=>{document.title=t+' — DINESH RAJBANSHI';app.innerHTML=wrap(`<h1>${t}</h1>${h}`)};
+async function contact(){app.innerHTML=wrap(`<h1>Contact us</h1><form class="f" id="cf"><label>Name<input name="name" required></label><label>Email<input name="email" type="email" required></label><label>Message<textarea name="message" required minlength="10"></textarea></label><button class="btn">Send message</button></form>`);form('#cf',d=>api('/contact','POST',d),'Message sent — thank you')}
+const R=[[/^\/$/,home],[/^\/learn$/,learn],[/^\/learn\/([\w-]+)$/,article],[/^\/discussions$/,discuss],[/^\/discussions\/(\d+)$/,topic],[/^\/classes$/,classes],[/^\/classes\/(\d+)$/,course],[/^\/dashboard$/,dash],[/^\/admin$/,adminPage],[/^\/contact$/,contact],
+[/^\/about$/,page('About Us','<p>DINESH RAJBANSHI is a place to learn modern farming, use agricultural technology wisely and help each other grow better crops. Everything here is written to be clear for farmers of every experience level.</p>')],
+[/^\/privacy$/,page('Privacy Policy','<p>We sign you in with Google and store your name, email and contact number. Your email and phone number are never shown publicly; only your name appears on posts. Site admins can see contact details to moderate and support the community. We do not sell your data. Ask us to delete your account at any time through the Contact page.</p>')],
+[/^\/terms$/,page('Terms & Conditions','<p>Be respectful, share honest farming advice and do not post spam or harmful content. Admins may hide posts or suspend accounts that break these rules. Content here is educational and is not a substitute for local expert advice. By signing in you agree to these terms and the Privacy Policy.</p>')]];
+async function route(p,push=true){if(push)history.pushState({},'',p);const path=p.split('?')[0];app.innerHTML=sk;document.title='DINESH RAJBANSHI — Modern Farming';app.onclick=null;
+ const m=R.map(([re,f])=>[path.match(re),f]).find(x=>x[0]);
+ try{if(!m)app.innerHTML=wrap('<h1>Page not found</h1>'+empty('That page does not exist.','<a class="btn" href="/" data-l>Go home</a>'));else await m[1](...m[0].slice(1))}
+ catch(e){app.innerHTML=wrap(`<div class="err" role="alert">${esc(e.message)}</div>`)}
+ document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')===path));$('#nav').classList.remove('open');$('#mt').setAttribute('aria-expanded','false');
+ scrollTo(0,0);const io=new IntersectionObserver(es=>es.forEach(e=>e.isIntersecting&&(e.target.classList.add('in'),io.unobserve(e.target))),{threshold:.05});document.querySelectorAll('.rv').forEach(x=>io.observe(x))}
+document.addEventListener('click',e=>{const a=e.target.closest('a[data-l]');if(a&&!e.metaKey&&!e.ctrlKey){e.preventDefault();route(a.getAttribute('href'))}});
+$('#mt').onclick=()=>{const o=$('#nav').classList.toggle('open');$('#mt').setAttribute('aria-expanded',o)};
+onpopstate=()=>route(location.pathname+location.search,false);
+async function boot(){try{const m=await api('/me');csrf=m.csrf;me=m.user;isAdmin=m.admin;cats=m.cats}catch{}authUI();route(location.pathname+location.search,false)}
+$('#hi').onerror=function(){this.replaceWith(Object.assign(document.createElement('a'),{className:'logo',href:'/',textContent:'DINESH RAJBANSHI'}))};
+boot();
