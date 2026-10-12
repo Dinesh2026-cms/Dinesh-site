@@ -35,7 +35,7 @@ async function change(env,n,fn){for(let i=0;i<4;i++){const f=await file(env,n,i>
 export default{async fetch(req,env){try{return await handle(req,env)}catch(e){if(e instanceof V)return J({error:e.message},e.c);console.error(e);return J({error:'Something went wrong on our side.'},500)}}};
 async function handle(req,env){
  const url=new URL(req.url),p=url.pathname,M=req.method,ip=req.headers.get('cf-connecting-ip')||'x';
- if(p==='/robots.txt')return new Response(`User-agent: *\nDisallow: /admin\nDisallow: /dashboard\nSitemap: ${url.origin}/sitemap.xml\n`,{headers:{'content-type':'text/plain'}});
+ if(p==='/robots.txt')return new Response(`User-agent: *\nDisallow: /admin\nDisallow: /developer\nDisallow: /dashboard\nSitemap: ${url.origin}/sitemap.xml\n`,{headers:{'content-type':'text/plain'}});
  if(!(p.startsWith('/api/')||p.startsWith('/auth/')||p==='/sitemap.xml'))return env.ASSETS.fetch(req);
  if(!env.SESSION_SECRET)throw new V('SESSION_SECRET is not set.',500);
  if(!env.GITHUB_TOKEN||!env.GITHUB_REPO)throw new V('GitHub storage is not set up.',500);
@@ -45,7 +45,7 @@ async function handle(req,env){
  const jar=cookies(req),out=[],EXP=()=>Date.now()+6048e5;let s=jar.sid?await unsign(env,jar.sid):null;
  const setS=async o=>{s=o;out.push(`sid=${await sign(env,o)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800`)};
  let u=s?.uid?(await R('users')).find(x=>x.id===s.uid)||null:null;if(u?.banned)u=null;
- const isAdmin=!!(s?.admin&&s.aexp>Date.now());
+ const isAdmin=!!(s?.admin&&s.aexp>Date.now()),isDev=!!(s?.dev&&s.dexp>Date.now());
  if(p==='/auth/google'){const st=rnd();return go('https://accounts.google.com/o/oauth2/v2/auth?'+new URLSearchParams({client_id:env.GOOGLE_CLIENT_ID,redirect_uri:url.origin+'/auth/google/callback',response_type:'code',scope:'openid email profile',state:st,prompt:'select_account'}),[`oas=${st}; Path=/auth; HttpOnly; Secure; SameSite=Lax; Max-Age=600`])}
  if(p==='/auth/google/callback'){try{const c=url.searchParams.get('code');if(!c||url.searchParams.get('state')!==jar.oas)throw 0;
   const t=await(await fetch('https://oauth2.googleapis.com/token',{method:'POST',body:new URLSearchParams({code:c,client_id:env.GOOGLE_CLIENT_ID,client_secret:env.GOOGLE_CLIENT_SECRET,redirect_uri:url.origin+'/auth/google/callback',grant_type:'authorization_code'})})).json();
@@ -60,17 +60,17 @@ async function handle(req,env){
  if(p==='/auth/logout')return J({ok:1},200,['sid=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax']);
  const need=()=>{if(!u)throw new V('Please sign in with Google first.',401)},
  done=()=>{need();if(!u.name||!u.phone)throw new V('Add your name and contact number in your dashboard first.')},
- adm=()=>{if(!isAdmin)throw new V('Admins only.',403)};
+ adm=()=>{if(!isAdmin&&!isDev)throw new V('Admins only.',403)};
  let m;const is=(me,re)=>M===me&&(m=p.match(re));
- if(Wr&&!p.startsWith('/api/admin/'))lim('w:'+ip,60,900);
+ if(Wr&&!p.startsWith('/api/admin/')&&!p.startsWith('/api/dev/'))lim('w:'+ip,60,900);
  const st=env.MODERATE_FIRST==='1'?'pending':'visible';
  const names=async()=>Object.fromEntries((await R('users')).map(x=>[x.id,x.name||'Member']));
- if(is('GET',/^\/api\/me$/)){if(!s)await setS({csrf:rnd(),exp:EXP()});return J({csrf:s.csrf,cats:CATS,admin:isAdmin,user:u?{id:u.id,name:u.name,email:u.email,phone:u.phone}:null},200,out)}
+ if(is('GET',/^\/api\/me$/)){if(!s)await setS({csrf:rnd(),exp:EXP()});return J({csrf:s.csrf,cats:CATS,admin:isAdmin,dev:isDev,user:u?{id:u.id,name:u.name,email:u.email,phone:u.phone}:null},200,out)}
  if(is('GET',/^\/api\/articles$/))return J((await R('articles')).map(({slug,title,summary,category,created})=>({slug,title,summary,category,created})).reverse());
  if(is('GET',/^\/api\/articles\/([\w-]+)$/)){const a=(await R('articles')).find(x=>x.slug===m[1]);if(!a)throw new V('Article not found.',404);return J(a)}
  if(is('GET',/^\/api\/courses$/)){const l=await R('lessons');return J((await R('courses')).map(c=>({...c,lessons:l.filter(x=>x.course_id===c.id).length})).reverse())}
  if(is('GET',/^\/api\/courses\/(\d+)$/)){const c=(await R('courses')).find(x=>x.id===+m[1]);if(!c)throw new V('Class not found.',404);
-  const en=isAdmin||(u&&(await R('enrollments')).some(e=>e.user_id===u.id&&e.course_id===c.id));
+  const en=isAdmin||isDev||(u&&(await R('enrollments')).some(e=>e.user_id===u.id&&e.course_id===c.id));
   let l=(await R('lessons')).filter(x=>x.course_id===c.id).sort((a,b)=>a.pos-b.pos||a.id-b.id).map(({id,title,video_url,content})=>({id,title,video_url,content}));
   if(!en)l=l.map(x=>({id:x.id,title:x.title}));return J({...c,enrolled:!!en,lessons:l})}
  if(is('POST',/^\/api\/courses\/(\d+)\/enroll$/)){need();const id=+m[1];if(!(await R('courses')).some(c=>c.id===id))throw new V('Class not found.',404);
@@ -112,5 +112,22 @@ async function handle(req,env){
  if(is('DELETE',/^\/api\/admin\/(articles|courses)\/(\d+)$/)){const id=+m[2];await W(m[1],a=>{const i=a.findIndex(x=>x.id===id);if(i>=0)a.splice(i,1)});
   if(m[1]==='courses'){await W('lessons',a=>{for(let i=a.length-1;i>=0;i--)if(a[i].course_id===id)a.splice(i,1)});await W('enrollments',a=>{for(let i=a.length-1;i>=0;i--)if(a[i].course_id===id)a.splice(i,1)})}
   return J({ok:1})}
+ if(is('POST',/^\/api\/dev\/login$/)){lim('d:'+ip,5,900);if(!env.DEVELOPER_PASSWORD)throw new V('Developer password is not set.',500);
+  const h=async x=>new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(String(x??''))));
+  if(!crypto.subtle.timingSafeEqual(await h(body.password),await h(env.DEVELOPER_PASSWORD)))throw new V('Wrong password.',401);
+  await setS({...s,dev:1,dexp:Date.now()+432e5,csrf:rnd()});return J({ok:1},200,out)}
+ if(p.startsWith('/api/dev/')&&!isDev)throw new V('Developers only.',403);
+ if(is('POST',/^\/api\/dev\/logout$/)){await setS({...s,dev:0,csrf:rnd()});return J({ok:1},200,out)}
+ if(is('GET',/^\/api\/dev\/all$/)){const n=await names();return J({articles:(await R('articles')).slice().reverse(),courses:(await R('courses')).slice().reverse(),lessons:(await R('lessons')).slice().reverse(),
+  topics:(await R('topics')).slice().reverse().map(t=>({...t,author:n[t.user_id]})),replies:(await R('replies')).slice().reverse().map(x=>({...x,author:n[x.user_id]}))})}
+ if(is('PUT',/^\/api\/dev\/(articles|courses|lessons|topics|replies)\/(\d+)$/)){const T=m[1],id=+m[2],S=['visible','hidden','pending'];
+  const F={articles:x=>{x.title=str(body.title,3,150,'Title');x.summary=str(body.summary,5,300,'Summary');x.body=str(body.body,20,20000,'Article text');x.category=str(body.category,2,40,'Category')},
+   courses:x=>{if(!['Beginner','Intermediate','Advanced'].includes(body.level))throw new V('Choose a level.');x.title=str(body.title,3,150,'Title');x.description=str(body.description,5,2000,'Description');x.level=body.level},
+   lessons:x=>{const v=String(body.video_url||'').trim();if(v&&!/^https:\/\/\S+$/.test(v))throw new V('Video link must start with https://');x.title=str(body.title,3,150,'Title');x.content=str(body.content,0,10000,'Notes');x.video_url=v;x.pos=parseInt(body.pos)||0},
+   topics:x=>{if(!CATS.includes(body.category)||!S.includes(body.status))throw new V('Invalid category or status.');x.title=str(body.title,5,150,'Title');x.body=str(body.body,10,5000,'Text');x.category=body.category;x.status=body.status},
+   replies:x=>{if(!S.includes(body.status))throw new V('Invalid status.');x.body=str(body.body,2,3000,'Reply');x.status=body.status}};
+  await W(T,a=>{const x=a.find(y=>y.id===id);if(!x)throw new V('Not found.',404);F[T](x)});return J({ok:1})}
+ if(is('DELETE',/^\/api\/dev\/(articles|courses|lessons|topics|replies)\/(\d+)$/)){const T=m[1],id=+m[2],cut=(n,k)=>W(n,a=>{for(let i=a.length-1;i>=0;i--)if(a[i][k]===id)a.splice(i,1)});
+  await cut(T,'id');if(T==='courses'){await cut('lessons','course_id');await cut('enrollments','course_id')}if(T==='topics')await cut('replies','topic_id');return J({ok:1})}
  throw new V('Not found.',404);
 }
