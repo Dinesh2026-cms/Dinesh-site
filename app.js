@@ -1,7 +1,7 @@
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=d=>new Date(d.replace(' ','T')+'Z').toLocaleDateString(undefined,{dateStyle:'medium'});
-let me=null,csrf='',cats=[],isAdmin=false;
+let me=null,csrf='',cats=[],isAdmin=false,isDev=false;
 async function api(p,m='GET',b){const r=await fetch('/api'+p,{method:m,headers:{'Content-Type':'application/json','x-csrf-token':csrf},body:b?JSON.stringify(b):undefined});
  const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Something went wrong.');return d}
 function toast(t,bad){const e=$('#toast');e.textContent=t;e.className='show'+(bad?' bad':'');clearTimeout(toast.t);toast.t=setTimeout(()=>e.className='',3500)}
@@ -11,7 +11,7 @@ const empty=(t,a='')=>`<div class="empty"><p style="margin:0 auto 10px">${t}</p>
 const signin='<a class="btn" href="/auth/google">Sign in with Google</a>';
 function form(id,fn,ok){const f=$(id);if(!f)return;f.onsubmit=async e=>{e.preventDefault();const b=f.querySelector('button');b.disabled=true;
  try{const r=await fn(Object.fromEntries(new FormData(f)));toast(ok||'Saved');f.reset?.();if(r!==false)route(location.pathname,false)}catch(x){toast(x.message,true)}b.disabled=false}}
-function authUI(){$('#auth').innerHTML=(me?`<a href="/dashboard" data-l>${esc(me.name||'Dashboard')}</a><a href="#" id="lo">Sign out</a>`:'<a class="btn sm" href="/auth/google">Sign in</a>')+(isAdmin?'<a href="/admin" data-l>Admin</a>':'');
+function authUI(){$('#auth').innerHTML=(me?`<a href="/dashboard" data-l>${esc(me.name||'Dashboard')}</a><a href="#" id="lo">Sign out</a>`:'<a class="btn sm" href="/auth/google">Sign in</a>')+(isAdmin?'<a href="/admin" data-l>Admin</a>':'')+(isDev?'<a href="/developer" data-l>Developer</a>':'');
  const l=$('#lo');if(l)l.onclick=async e=>{e.preventDefault();await fetch('/auth/logout',{method:'POST',headers:{'x-csrf-token':csrf}});location.href='/'}}
 const hero=`<section class="hero"><i class="fl"></i><i class="fl"></i><i class="fl"></i><i class="fl"></i><div class="wrap"><div>
 <h1>Modern Farming, Smarter Technology, Better Future.</h1><p>Practical knowledge, a helpful farmer community and online classes — made simple for every farmer, from first season to fiftieth.</p>
@@ -47,7 +47,7 @@ async function dash(){if(!me){app.innerHTML=wrap('<h1>Your dashboard</h1>'+empty
 async function adminPage(){if(!isAdmin){app.innerHTML=wrap('<h1>Admin login</h1><form class="f" id="al"><label>Password<input name="password" type="password" required autocomplete="current-password"></label><button class="btn">Log in</button></form>');form('#al',async d=>{await api('/admin/login','POST',d);await boot();return false},'Logged in');return}
  const o=await api('/admin/overview');const tb=h=>`<div class="tw"><table>${h}</table></div>`;
  const btn=(a,l,x='')=>`<button class="btn sm alt" data-a="${a}" ${x}>${l}</button>`;
- app.innerHTML=wrap(`<h1>Admin dashboard</h1>${btn('lo','Log out of admin')}<h2>Users</h2>${tb(o.users.map(u=>`<tr><td>${esc(u.name)}<br><small>${esc(u.email)}</small></td><td>${u.role}</td><td>${u.banned?'banned':''}</td><td>${btn('u',u.banned?'Unban':'Ban',`data-id="${u.id}" data-b="${!u.banned}"`)}</td></tr>`).join(''))}
+ app.innerHTML=wrap(`<h1>Admin dashboard</h1>${btn('lo','Log out of admin')}<h2>Users</h2>${tb(o.users.map(u=>`<tr><td>${esc(u.name)}<br><small>${esc(u.email)}</small></td><td>${u.banned?'banned':''}</td><td>${btn('u',u.banned?'Unban':'Ban',`data-id="${u.id}" data-b="${!u.banned}"`)}</td></tr>`).join(''))}
  <h2>Discussions</h2>${tb(o.topics.map(t=>`<tr><td>${esc(t.title)}<br><small>${esc(t.author)}</small></td><td>${t.status}</td><td>${btn('t','Show',`data-id="${t.id}" data-s="visible"`)} ${btn('t','Hide',`data-id="${t.id}" data-s="hidden"`)}</td></tr>`).join(''))}
  <h2>Replies</h2>${tb(o.replies.map(t=>`<tr><td>${esc(t.body)}<br><small>${esc(t.author)}</small></td><td>${t.status}</td><td>${btn('r','Show',`data-id="${t.id}" data-s="visible"`)} ${btn('r','Hide',`data-id="${t.id}" data-s="hidden"`)}</td></tr>`).join(''))}
  <h2>New article</h2><form class="f" id="fa"><input name="title" placeholder="Title" required><input name="category" placeholder="Category" required><input name="summary" placeholder="Short summary" required><textarea name="body" placeholder="Article text" required></textarea><button class="btn">Publish article</button></form>
@@ -61,11 +61,11 @@ async function adminPage(){if(!isAdmin){app.innerHTML=wrap('<h1>Admin login</h1>
   else{if(!confirm('Delete permanently?'))return;await api(`/admin/${a==='da'?'articles':'courses'}/${id}`,'DELETE')}toast('Done');adminPage()}catch(x){toast(x.message,true)}}}
 const page=(t,h)=>()=>{document.title=t+' — DINESH RAJBANSHI';app.innerHTML=wrap(`<h1>${t}</h1>${h}`)};
 async function contact(){app.innerHTML=wrap(`<h1>Contact us</h1><form class="f" id="cf"><label>Name<input name="name" required></label><label>Email<input name="email" type="email" required></label><label>Message<textarea name="message" required minlength="10"></textarea></label><button class="btn">Send message</button></form>`);form('#cf',d=>api('/contact','POST',d),'Message sent — thank you')}
-const R=[[/^\/$/,home],[/^\/learn$/,learn],[/^\/learn\/([\w-]+)$/,article],[/^\/discussions$/,discuss],[/^\/discussions\/(\d+)$/,topic],[/^\/classes$/,classes],[/^\/classes\/(\d+)$/,course],[/^\/dashboard$/,dash],[/^\/admin$/,adminPage],[/^\/contact$/,contact],
+const R=[[/^\/$/,home],[/^\/learn$/,learn],[/^\/learn\/([\w-]+)$/,article],[/^\/discussions$/,discuss],[/^\/discussions\/(\d+)$/,topic],[/^\/classes$/,classes],[/^\/classes\/(\d+)$/,course],[/^\/dashboard$/,dash],[/^\/admin$/,adminPage],[/^\/developer$/,async()=>{await devReady;return devPage()}],[/^\/contact$/,contact],
 [/^\/about$/,page('About Us','<p>DINESH RAJBANSHI is a place to learn modern farming, use agricultural technology wisely and help each other grow better crops. Everything here is written to be clear for farmers of every experience level.</p>')],
 [/^\/privacy$/,page('Privacy Policy','<p>We sign you in with Google and store your name, email and contact number. Your email and phone number are never shown publicly; only your name appears on posts. Site admins can see contact details to moderate and support the community. We do not sell your data. Ask us to delete your account at any time through the Contact page.</p>')],
 [/^\/terms$/,page('Terms & Conditions','<p>Be respectful, share honest farming advice and do not post spam or harmful content. Admins may hide posts or suspend accounts that break these rules. Content here is educational and is not a substitute for local expert advice. By signing in you agree to these terms and the Privacy Policy.</p>')]];
-async function route(p,push=true){if(push)history.pushState({},'',p);const path=p.split('?')[0];app.innerHTML=sk;document.title='DINESH RAJBANSHI — Modern Farming';app.onclick=null;
+async function route(p,push=true){if(push)history.pushState({},'',p);const path=p.split('?')[0];app.innerHTML=sk;document.title='DINESH RAJBANSHI — Modern Farming';app.onclick=null;app.onsubmit=null;
  const m=R.map(([re,f])=>[path.match(re),f]).find(x=>x[0]);
  try{if(!m)app.innerHTML=wrap('<h1>Page not found</h1>'+empty('That page does not exist.','<a class="btn" href="/" data-l>Go home</a>'));else await m[1](...m[0].slice(1))}
  catch(e){app.innerHTML=wrap(`<div class="err" role="alert">${esc(e.message)}</div>`)}
@@ -74,6 +74,7 @@ async function route(p,push=true){if(push)history.pushState({},'',p);const path=
 document.addEventListener('click',e=>{const a=e.target.closest('a[data-l]');if(a&&!e.metaKey&&!e.ctrlKey){e.preventDefault();route(a.getAttribute('href'))}});
 $('#mt').onclick=()=>{const o=$('#nav').classList.toggle('open');$('#mt').setAttribute('aria-expanded',o)};
 onpopstate=()=>route(location.pathname+location.search,false);
-async function boot(){try{const m=await api('/me');csrf=m.csrf;me=m.user;isAdmin=m.admin;cats=m.cats}catch{}authUI();route(location.pathname+location.search,false)}
+async function boot(){try{const m=await api('/me');csrf=m.csrf;me=m.user;isAdmin=m.admin;isDev=m.dev;cats=m.cats}catch{}authUI();route(location.pathname+location.search,false)}
 $('#hi').onerror=function(){this.replaceWith(Object.assign(document.createElement('a'),{className:'logo',href:'/',textContent:'DINESH RAJBANSHI'}))};
+const load=u=>new Promise(r=>{const e=document.createElement('script');e.src=u;e.onload=e.onerror=r;document.head.append(e)}),devReady=load('/developer.js');load('/motion.js');document.head.append(Object.assign(document.createElement('link'),{rel:'stylesheet',href:'/motion.css'}));
 boot();
