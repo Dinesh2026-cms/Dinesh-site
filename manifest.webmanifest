@@ -1,12 +1,12 @@
 {
-  "name": "Dinesh Rajbanshi",
-  "short_name": "Dinesh Rajbanshi",
-  "description": "Modern Farming, Smarter Technology, Better Future.",
+  "name": "Dinesh Rajbanshi \u2014 Developer",
+  "short_name": "DR Developer",
+  "description": "Developer portal",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#FFFFFF",
-  "theme_color": "#0b5d2e",
+  "theme_color": "#073d1e",
   "icons": [
     {
       "src": "/icon-192.png",
