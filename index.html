@@ -1,14 +1,95 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DINESH RAJBANSHI — Modern Farming</title>
-<meta name="description" content="Modern farming knowledge, farmer discussions and online classes. Modern Farming, Smarter Technology, Better Future.">
-<meta property="og:title" content="DINESH RAJBANSHI"><meta property="og:description" content="Modern Farming, Smarter Technology, Better Future.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%230b3d1e'/%3E%3Cpath d='M16 26V14M16 16C10 16 8 11 8 8c5 0 8 3 8 8zm0 2c6 0 8-5 8-8-5 0-8 3-8 8z' stroke='%23fff' fill='none' stroke-width='2'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="/style.css">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"DINESH RAJBANSHI","slogan":"Modern Farming, Smarter Technology, Better Future."}</script>
-</head><body><a class="skip" href="#app">Skip to content</a>
-<div id="hd"><img id="hi" src="/header.webp" alt="DINESH RAJBANSHI — Modern Farming, Smarter Technology, Better Future."></div>
-<header><div class="bar"><button id="mt" aria-expanded="false" aria-controls="nav" aria-label="Menu">☰ Menu</button>
-<nav id="nav"><a href="/" data-l>Home</a><a href="/learn" data-l>Learn</a><a href="/discussions" data-l>Discussions</a><a href="/classes" data-l>Classes</a><a href="/about" data-l>About</a><a href="/contact" data-l>Contact</a><span id="auth"></span></nav></div></header>
-<main id="app" tabindex="-1"></main>
-<footer><p><b>DINESH RAJBANSHI</b> — Modern Farming, Smarter Technology, Better Future.</p><p><a href="/privacy" data-l>Privacy Policy</a> · <a href="/terms" data-l>Terms &amp; Conditions</a></p></footer>
-<div id="toast" role="status" aria-live="polite"></div><script src="/app.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Developer · Dinesh Rajbanshi</title>
+<meta name="theme-color" content="#073d1e">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png" type="image/png">
+<style>
+:root{--ac:#073d1e;--ln:#d8e4dc;--soft:#f1f7f3;--mu:#5b6f62}
+*{box-sizing:border-box}body{margin:0;background:#fff;color:#12301f;font:16px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+.hd{display:block;background:var(--ac);padding-top:env(safe-area-inset-top,0)}.hd img{display:block;width:100%;height:clamp(64px,15vw,170px);object-fit:cover;object-position:right center}
+.w{max-width:820px;margin:0 auto;padding:16px}
+h1{font:700 24px Georgia,serif;margin:8px 0 14px;color:var(--ac)}
+label{display:block;font-size:13px;font-weight:600;color:var(--mu)}
+input,textarea{width:100%;padding:10px;margin:4px 0 12px;border:1px solid var(--ln);border-radius:4px;font:16px system-ui;background:#fff;color:inherit}
+textarea{min-height:220px;font-family:Georgia,serif}
+.bt{padding:9px 16px;border:1px solid var(--ac);background:var(--ac);color:#fff;border-radius:4px;font-size:15px;cursor:pointer;margin:2px}
+.bt.o{background:none;color:var(--ac)}.bt.r{background:#a12b2b;border-color:#a12b2b}.bt:disabled{opacity:.5}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--ln);flex-wrap:wrap}
+.imgs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:6px 0 14px}
+.slot{border:2px dashed var(--ln);border-radius:8px;background:var(--soft);aspect-ratio:3/2;position:relative;overflow:hidden;display:grid;place-items:center;text-align:center;color:var(--mu);font-size:14px}
+.slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.slot .bar{position:absolute;left:0;right:0;bottom:0;display:flex;gap:6px;justify-content:center;padding:6px;background:rgba(7,61,30,.75)}
+.slot .bar .bt{padding:5px 10px;font-size:13px}
+.slot.busy:after{content:"Uploading…";position:absolute;inset:0;background:rgba(255,255,255,.85);display:grid;place-items:center;color:var(--ac);font-weight:700}
+.ck{display:flex;gap:8px;align-items:center;margin-bottom:12px}.ck input{width:auto;margin:0}
+.tag{font-size:12px;background:var(--ac);color:#fff;padding:1px 8px;border-radius:3px;margin-left:6px}
+@media(max-width:520px){.imgs{grid-template-columns:1fr}}
+</style></head><body>
+<a class="hd" href="/"><img src="/header.webp" alt="Dinesh Rajbanshi" width="1600" height="262"></a>
+<div class="w" id="app">Loading…</div>
+<script>
+/* ===== Backend paths (edit here if your worker.js differs) =====
+   login:  POST {password}  -> sets session cookie
+   db:     GET -> {articles:[...]} ; POST {articles:[...]} saves to GitHub
+   upload: POST raw image/jpeg body -> {url}                         */
+var API={login:"/api/login",db:"/api/admin/db",upload:"/api/admin/upload",logout:"/api/logout"};
+var $=function(s){return document.querySelector(s)},DB=null,ed=null,busy=[0,0];
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function call(u,o){o=o||{};o.credentials="same-origin";return fetch(u,o)}
+
+function loginView(m){$("#app").innerHTML='<h1>Developer login</h1><label>Password</label><input id="pw" type="password" autocomplete="current-password"><button class="bt" id="lg">Log in</button><p style="color:#a12b2b">'+(m||"")+'</p>'}
+function listView(){
+  var A=(DB.articles||[]).slice().sort(function(a,b){return new Date(b.date||0)-new Date(a.date||0)});
+  $("#app").innerHTML='<div class="row"><h1 style="margin:0">Articles</h1><div><button class="bt" id="nw">+ New article</button><button class="bt o" id="lo">Log out</button></div></div>'+
+   (A.length?A.map(function(a){return '<div class="row"><div><b>'+esc(a.title)+'</b>'+(a.featured?'<span class="tag">Featured</span>':'')+'<br><small>'+(a.images||[]).length+' / 2 images</small></div><div><button class="bt o" data-ed="'+esc(a.id)+'">Edit</button><button class="bt r" data-del="'+esc(a.id)+'">Delete</button></div></div>'}).join(""):'<p>No articles yet.</p>');
+}
+function slot(i){
+  var u=(ed.images||[])[i];
+  return '<div class="slot'+(busy[i]?' busy':'')+'">'+(u?'<img src="'+esc(u)+'" alt="">':'Image '+(i+1)+'<br>Tap to choose from phone or computer')+
+   '<div class="bar"><label class="bt" style="margin:0;color:#fff">'+(u?'Replace':'Choose')+'<input type="file" accept="image/*" data-img="'+i+'" hidden></label>'+(u?'<button class="bt r" data-rm="'+i+'">Remove</button>':'')+'</div></div>';
+}
+function editView(){
+  var a=ed,d=a.date?new Date(a.date):new Date();d=new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,16);
+  $("#app").innerHTML='<h1>'+(a.id?'Edit article':'New article')+'</h1>'+
+   '<label>Title</label><input id="e_t" value="'+esc(a.title)+'"><label>Short summary</label><input id="e_s" value="'+esc(a.summary)+'" maxlength="220">'+
+   '<label>Images (2)</label><div class="imgs" id="im">'+slot(0)+slot(1)+'</div>'+
+   '<label>Article text</label><textarea id="e_b">'+esc(a.body)+'</textarea><label>Date</label><input id="e_d" type="datetime-local" value="'+d+'">'+
+   '<label class="ck"><input type="checkbox" id="e_f" '+(a.featured?'checked':'')+'> Feature at top of Home</label>'+
+   '<button class="bt" id="sv">Save &amp; publish</button><button class="bt o" id="cx">Cancel</button>';
+}
+function sync(){if(!$("#e_t"))return;ed.title=$("#e_t").value;ed.summary=$("#e_s").value;ed.body=$("#e_b").value;ed.featured=$("#e_f").checked;if($("#e_d").value)ed.date=new Date($("#e_d").value).toISOString()}
+function persist(){return call(API.db,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(DB)}).then(function(r){if(!r.ok)throw 0;return true}).catch(function(){alert("Could not save. Please try again.");return false})}
+
+/* resize to max 1280px JPEG, then upload */
+function shrink(f){return new Promise(function(ok,no){var r=new FileReader();r.onload=function(){var i=new Image();i.onload=function(){var s=Math.min(1,1280/Math.max(i.width,i.height)),c=document.createElement("canvas");c.width=Math.round(i.width*s);c.height=Math.round(i.height*s);c.getContext("2d").drawImage(i,0,0,c.width,c.height);c.toBlob(function(b){b?ok(b):no()},"image/jpeg",.82)};i.onerror=no;i.src=r.result};r.onerror=no;r.readAsDataURL(f)})}
+function putImg(f,i){
+  sync();busy[i]=1;editView();
+  shrink(f).then(function(b){return call(API.upload,{method:"POST",headers:{"Content-Type":"image/jpeg"},body:b})})
+   .then(function(r){if(!r.ok)throw 0;return r.json()})
+   .then(function(j){ed.images=ed.images||[];ed.images[i]=j.url;ed.images=[ed.images[0]||"",ed.images[1]||""];busy[i]=0;editView()})
+   .catch(function(){busy[i]=0;editView();alert("Image upload failed. Try a smaller photo.")});
+}
+
+document.addEventListener("change",function(e){var t=e.target;if(t.dataset&&t.dataset.img!=null&&t.files[0])putImg(t.files[0],+t.dataset.img)});
+document.addEventListener("click",function(e){
+  var t=e.target,id=t.id,D=t.dataset||{};
+  if(id==="lg"){call(API.login,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:$("#pw").value})}).then(function(r){if(!r.ok)throw 0;return init()}).catch(function(){loginView("Wrong password.")})}
+  else if(id==="lo"){call(API.logout,{method:"POST"}).finally(function(){DB=null;loginView()})}
+  else if(id==="nw"){ed={images:["",""]};editView()}
+  else if(D.ed){ed=JSON.parse(JSON.stringify(DB.articles.filter(function(a){return a.id===D.ed})[0]));ed.images=[(ed.images||[])[0]||"",(ed.images||[])[1]||""];editView()}
+  else if(D.del){if(!confirm("Delete permanently?"))return;DB.articles=DB.articles.filter(function(a){return a.id!==D.del});persist().then(listView)}
+  else if(D.rm!=null){sync();ed.images[+D.rm]="";editView()}
+  else if(id==="cx"){ed=null;listView()}
+  else if(id==="sv"){sync();if(!ed.title||!ed.body)return alert("Title and article text are required.");
+    ed.images=(ed.images||[]).filter(Boolean);ed.date=ed.date||new Date().toISOString();DB.articles=DB.articles||[];
+    if(!ed.id){ed.id="a"+Date.now();DB.articles.push(ed)}else DB.articles=DB.articles.map(function(a){return a.id===ed.id?ed:a});
+    if(ed.featured)DB.articles.forEach(function(a){if(a.id!==ed.id)a.featured=false});
+    t.disabled=true;persist().then(function(ok){if(ok){ed=null;listView()}else t.disabled=false})}
+});
+function init(){return call(API.db).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){DB=j;DB.articles=DB.articles||[];listView()}).catch(function(){loginView()})}
+init();
+</script></body></html>
