@@ -24,28 +24,33 @@ Do not rename or edit the two site files.
    - Repository permissions: **Contents = Read and write**
    - Generate, copy the token (starts with `github_pat_`). You only see it once, so paste it into a note.
 
-## 2. Public website (Cloudflare)
-1. dash.cloudflare.com > **Workers & Pages > Create > Pages > Connect to Git** > pick `farming-public`.
-2. Build settings, exactly:
-   - Framework preset: **None**
-   - Build command: `mkdir -p dist && cp public-site.js dist/_worker.js`
-   - Build output directory: `dist`
-3. **Save and Deploy**.
-4. Project > **Settings > Variables and secrets > Add**, two entries:
-   - `GH_REPO` (type Text): `YOURGITHUBUSERNAME/farming-data`
-   - `GH_TOKEN` (type **Secret**): the `github_pat_...` token
-5. **Deployments > Retry deployment** (settings apply on the next deploy).
-6. **Custom domains > Set up a domain**: `dineshrajbanshi.com.np`.
+## 2. Public website (Cloudflare Worker)
+Cloudflare's new screen creates a "Worker" (not a "Pages" project). That is fine: our file is a Worker.
+1. dash.cloudflare.com > **Workers & Pages > Create > Import a repository** (Git) > pick `farming-public`.
+2. Project name: `farming-public`. Production branch: `main`.
+3. Build settings (open the advanced / build section):
+   - Build command: leave EMPTY
+   - Deploy command (replace what is there):
+     `npx wrangler deploy public-site.js --name farming-public --compatibility-date 2025-09-01 --keep-vars`
+   - Root directory: `/`
+4. **Deploy.** It should end with "Deployed farming-public".
+5. Open the Worker > **Settings > Variables and secrets > Add** (these are NOT the "Build variables"):
+   - `GH_REPO` : `YOURGITHUBUSERNAME/farming-data`  (use type **Secret** so it is never wiped)
+   - `GH_TOKEN` : the `github_pat_...` token (type **Secret**)
+   Save and deploy.
+6. **Settings > Domains & Routes > Add > Custom domain**: `dineshrajbanshi.com.np`.
 
-## 3. Admin (developer) website (Cloudflare)
-1. Same again, connect `farming-admin`, with:
-   - Build command: `mkdir -p dist && cp admin-site.js dist/_worker.js`
-   - Build output directory: `dist`
-2. Variables and secrets, three entries:
-   - `ADMIN_PASSWORD` (type **Secret**): your own strong password, 12+ characters. This is your developer login.
-   - `GH_TOKEN` (type **Secret**): the same `github_pat_...` token
-   - `GH_REPO` (type Text): `YOURGITHUBUSERNAME/farming-data`
-3. Retry deployment. Custom domain: `admin.dineshrajbanshi.com.np`.
+## 3. Admin (developer) website (Cloudflare Worker)
+1. Same again: **Create > Import a repository** > `farming-admin`, project name `farming-admin`.
+2. Build command EMPTY. Deploy command:
+   `npx wrangler deploy admin-site.js --name farming-admin --compatibility-date 2025-09-01 --keep-vars`
+3. After it deploys: **Settings > Variables and secrets > Add**, all type **Secret**:
+   - `ADMIN_PASSWORD` : your own strong password (12+ characters). This is your developer login.
+   - `GH_TOKEN` : the same `github_pat_...` token
+   - `GH_REPO` : `YOURGITHUBUSERNAME/farming-data`
+4. **Settings > Domains & Routes > Add > Custom domain**: `admin.dineshrajbanshi.com.np`.
+
+If you named a Worker something other than `farming-public` / `farming-admin`, put that exact name after `--name`.
 
 ## 4. First use
 Open admin.dineshrajbanshi.com.np, log in, go to **Profile** to upload your photo and write About, then write your first article. Delete the sample "Welcome" article if you like.
@@ -63,7 +68,7 @@ You can read or download them any time. That is your backup.
 - **Keep the token safe:** if you ever think it leaked, delete it on GitHub, make a new one and update `GH_TOKEN` in both Cloudflare projects.
 - **Password limit:** the "6 wrong tries" lock is best-effort. Use a long password.
 - **.com.np domain:** its nameservers must point to Cloudflare. If Cloudflare shows "pending", change the nameservers at your .np registrar to the two Cloudflare gives you.
-- **Changing the password:** edit `ADMIN_PASSWORD` in Cloudflare and retry deployment.
 - **Payments:** a booking records the request and shows your payment instructions (edit them in Profile). Online payment can be added later.
 - **Listen button:** uses the phone's built-in speech engine (Google voices on Android Chrome). Nepali needs "Speech Services by Google" with Nepali installed.
-- **If the build fails** with "file not found": the file in the repo must be named exactly `public-site.js` (or `admin-site.js`) and the build command must match.
+- **If the deploy fails** with "entry-point not found": the file in the repo must be named exactly `public-site.js` (or `admin-site.js`) and the deploy command must match.
+- **Changing the password:** edit the `ADMIN_PASSWORD` secret, then deploy again.
