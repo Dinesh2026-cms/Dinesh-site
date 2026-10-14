@@ -1,7 +1,5 @@
 {
   "name": "dinesh-site",
-  "compatibility_date": "2026-10-12",
-  "assets": {
-    "directory": "./public"
-  }
+  "main": "public-site.js",
+  "compatibility_date": "2026-10-12"
 }
