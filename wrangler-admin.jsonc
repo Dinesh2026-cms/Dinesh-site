@@ -1,1 +1,5 @@
-"name": "dinesh-rajbanshi-admin",
+{
+  "name": "dinesh-rajbanshi-admin",
+  "main": "admin-site.js",
+  "compatibility_date": "2026-10-12"
+}
